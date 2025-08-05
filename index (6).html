@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Калькулятор квартальных календарей</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f8f9fa;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      font-size: 1.5em;
+    }
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .option-btn {
+      padding: 10px 14px;
+      border: 1px solid #ccc;
+      background: #f0f0f0;
+      color: #333;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .option-btn.active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    button#calculate {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 15px;
+    }
+    button#copy {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 15px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 18px;
+      background: #f8fff8;
+      border: 1px solid #d4edda;
+      border-radius: 8px;
+    }
+    .price {
+      font-weight: bold;
+      color: #155724;
+    }
+    .note {
+      font-size: 14px;
+      color: #6c757d;
+      margin-top: 15px;
+      font-style: italic;
+    }
+    .result p {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Калькулятор квартальных календарей</h1>
+
+    <!-- Параметры -->
+    <div class="form-group">
+      <label>Размер:</label>
+      <div class="options" id="size-options">
+        <button class="option-btn" data-size="mini">Мини</button>
+        <button class="option-btn" data-size="midi">Миди</button>
+        <button class="option-btn" data-size="maxi">Макси</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Тираж:</label>
+      <div class="options" id="tirazh-options">
+        <button class="option-btn" data-tirazh="25">25</button>
+        <button class="option-btn" data-tirazh="50">50</button>
+        <button class="option-btn" data-tirazh="100">100</button>
+        <button class="option-btn" data-tirazh="150">150</button>
+        <button class="option-btn" data-tirazh="200">200</button>
+        <button class="option-btn" data-tirazh="250">250</button>
+        <button class="option-btn" data-tirazh="300">300</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Ламинация:</label>
+      <div class="options" id="lam-options">
+        <button class="option-btn" data-lam="none">Нет</button>
+        <button class="option-btn active" data-lam="1+0">1+0</button>
+        <button class="option-btn" data-lam="1+1">1+1</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Тип блока:</label>
+      <div class="options" id="block-options">
+        <button class="option-btn active" data-block="matte">Мелованный</button>
+        <button class="option-btn" data-block="metallic">Металлизированный (+20)</button>
+        <button class="option-btn" data-block="offset">Офсетный (-5)</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Дополнительно:</label>
+      <div class="options" id="extra-options">
+        <button class="option-btn" data-extra="cursor">Курсор (+140)</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Наценка:</label>
+      <div class="options" id="markup-options">
+        <button class="option-btn" data-markup="20">+20%</button>
+        <button class="option-btn" data-markup="5000">+5000 руб</button>
+      </div>
+    </div>
+
+    <button id="calculate">Рассчитать</button>
+
+    <!-- Результат -->
+    <div id="result" style="display: none;" class="result">
+      <p><strong>Цена за штуку (без наценки):</strong> <span id="base-price-per-unit" class="price">—</span> ₽</p>
+      <p><strong>Общая сумма (без наценки):</strong> <span id="base-total" class="price">—</span> ₽</p>
+      <p><strong>Цена за штуку (с наценкой):</strong> <span id="final-price-per-unit" class="price">—</span> ₽</p>
+      <p><strong>Общая сумма (с наценкой):</strong> <span id="final-total" class="price">—</span> ₽</p>
+      <button id="copy">📋 Скопировать итог (с наценкой)</button>
+      <p class="note" id="cost-note"></p>
+    </div>
+
+    <p class="note">
+      * Блок из www.polimat.ru. Металлизированные блоки +20 руб/шт. Офсетные блоки -5 руб/шт. Магнитный курсор +140 руб/шт
+    </p>
+  </div>
+
+  <script>
+    // Таблица цен: [тираж, мини, миди, макси]
+    // Все значения УВЕЛИЧЕНЫ на 5 руб (по сравнению с исходными)
+    const prices = [
+      [25,  285, 355, 535],  // было 280 → 285, 350 → 355, 530 → 535
+      [50,  277, 305, 520],  // 272→277, 300→305, 515→520
+      [100, 228, 270, 420],  // 223→228, 265→270, 415→420
+      [150, 223, 260, 412],  // 218→223, 255→260, 407→412
+      [200, 212, 255, 390],  // 207→212, 250→255, 385→390
+      [250, 198, 250, 360],  // 193→198, 245→250, 355→360
+      [300, 194, 248, 353]   // 189→194, 243→248, 348→353
+    ];
+
+    const lamination = {
+      '1+0': {mini:15, midi:20, maxi:30},
+      '1+1': {mini:30, midi:40, maxi:60}
+    };
+
+    // Себестоимость по размерам
+    const costInfo = {
+      mini:  { block: 60, assembly: 50 },
+      midi:  { block: 90, assembly: 60 },
+      maxi:  { block: 110, assembly: 70 }
+    };
+
+    // Выбранные параметры (с дефолтами)
+    let sel = {
+      size: null,
+      tirazh: null,
+      lam: '1+0',
+      block: 'matte',
+      extra: null,
+      markup: null
+    };
+
+    // Универсальный обработчик выбора
+    function makeSelectable(containerId, key, defaultValue = null) {
+      document.querySelectorAll(`#${containerId} .option-btn`).forEach(btn => {
+        const value = btn.getAttribute(`data-${key}`);
+        if (btn.classList.contains('active')) {
+          sel[key] = value;
+        }
+        btn.addEventListener('click', () => {
+          document.querySelectorAll(`#${containerId} .option-btn`).forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          sel[key] = value;
+        });
+      });
+
+      // Подставляем дефолт, если не выбрано
+      if (!sel[key] && defaultValue) {
+        sel[key] = defaultValue;
+        const defaultBtn = document.querySelector(`#${containerId} [data-${key}="${defaultValue}"]`);
+        if (defaultBtn) defaultBtn.classList.add('active');
+      }
+    }
+
+    makeSelectable('size-options', 'size');
+    makeSelectable('tirazh-options', 'tirazh');
+    makeSelectable('lam-options', 'lam', '1+0');
+    makeSelectable('block-options', 'block', 'matte');
+    makeSelectable('extra-options', 'extra');
+    makeSelectable('markup-options', 'markup');
+
+    // Расчёт
+    document.getElementById('calculate').onclick = function() {
+      if (!sel.size || !sel.tirazh || !sel.block || !sel.markup) {
+        alert("Пожалуйста, выберите: размер, тираж и наценку.");
+        return;
+      }
+
+      const t = parseInt(sel.tirazh);
+      const row = prices.find(r => r[0] === t);
+      if (!row) {
+        alert("Ошибка: нет данных для тиража " + t);
+        return;
+      }
+
+      const sizeIndex = {mini:1, midi:2, maxi:3}[sel.size];
+      let pricePerUnitBase = row[sizeIndex]; // +5 уже учтено
+
+      // Ламинация
+      if (sel.lam === '1+0' || sel.lam === '1+1') {
+        pricePerUnitBase += lamination[sel.lam][sel.size];
+      }
+
+      // Блок
+      if (sel.block === 'metallic') pricePerUnitBase += 20;
+      if (sel.block === 'offset') pricePerUnitBase -= 5;
+
+      // Курсор
+      if (sel.extra === 'cursor') pricePerUnitBase += 140;
+
+      // Итого без наценки
+      const totalBase = pricePerUnitBase * t;
+
+      // С наценкой
+      let totalFinal = totalBase;
+      if (sel.markup === '20') totalFinal *= 1.2;
+      if (sel.markup === '5000') totalFinal += 5000;
+
+      const pricePerUnitFinal = Math.round(totalFinal / t);
+      const totalFinalRounded = Math.round(totalFinal);
+
+      // Форматирование
+      const format = num => num.toLocaleString();
+
+      // Выводим цены
+      document.getElementById('base-price-per-unit').textContent = format(pricePerUnitBase);
+      document.getElementById('base-total').textContent = format(totalBase);
+      document.getElementById('final-price-per-unit').textContent = format(pricePerUnitFinal);
+      document.getElementById('final-total').textContent = format(totalFinalRounded);
+
+      // Примечание по себестоимости — только для выбранного размера
+      const sizeNames = { mini: 'Мини', midi: 'Миди', maxi: 'Макси' };
+      const cost = costInfo[sel.size];
+      document.getElementById('cost-note').innerHTML = `
+        * Блок из <a href="https://www.polimat.ru" target="_blank">www.polimat.ru</a>. 
+        Для ${sizeNames[sel.size]}: стоимость блока — ${cost.block} руб, сборка — ${cost.assembly} руб
+      `;
+
+      // Текст для копирования (только итог, без примечаний)
+      window.copyText = `Цена за штуку: ${format(pricePerUnitFinal)} ₽
+Общая сумма: ${format(totalFinalRounded)} ₽
+* Блоки полиграфические мелованные. Металлизированные блоки +20 руб/шт. Офсетные блоки -5 руб/шт. Магнитный курсор +140 руб/шт`;
+
+      document.getElementById('result').style.display = 'block';
+    };
+
+    // Копирование
+    document.getElementById('copy').onclick = function() {
+      if (!window.copyText) {
+        alert("Сначала нажмите 'Рассчитать'");
+        return;
+      }
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.copyText).then(() => {
+          this.textContent = "✅ Скопировано!";
+          setTimeout(() => this.textContent = "📋 Скопировать итог (с наценкой)", 2000);
+        }).catch(() => fallbackCopy());
+      } else {
+        fallbackCopy();
+      }
+    };
+
+    // Резервное копирование
+    function fallbackCopy() {
+      const text = window.copyText;
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        alert("✅ Скопировано: " + text);
+      } catch (e) {
+        prompt("Скопируйте вручную:", text);
+      }
+      document.body.removeChild(ta);
+    }
+  </script>
+</body>
+</html>
