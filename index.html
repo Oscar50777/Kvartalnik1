@@ -108,6 +108,33 @@
       font-style: italic;
     }
     a { color: #007bff; }
+
+    /* Стили для прайс-таблицы */
+    #price-table-container {
+      display: none;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    #price-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    #price-table th, #price-table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+      font-size: 13px;
+    }
+    #price-table th {
+      background-color: #f0f0f0;
+    }
+    #price-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
   </style>
 </head>
 <body>
@@ -162,23 +189,20 @@
       <h3>Тиснение</h3>
       <div>
         <span onclick="setFoil('cap')" id="btn-foil-cap" class="btn" data-group="foil" data-value="cap">Шапка</span>
-        <span onclick="setFoil('cap+bottom')" id="btn-foil-bottom" class="btn" data-group="foil" data-value="cap+bottom">Шапка+нижний</span>
-        <span onclick="setFoil('cap+3')" id="btn-foil-3" class="btn" data-group="foil" data-value="cap+3">Везде </span>
+        <span onclick="setFoil('cap+bottom')" id="btn-foil-bottom" class="btn" data-group="foil" data-value="cap+bottom">+нижний</span>
+        <span onclick="setFoil('cap+3')" id="btn-foil-3" class="btn" data-group="foil" data-value="cap+3">+3</span>
         <span onclick="setFoil('none')" id="btn-foil-none" class="btn active" data-group="foil" data-value="none">Нет</span>
-         <p class="note">
-      * Расчет тиснения произведен исходя из размеров клише не более чем 15х3 см. Стоимость клише учтена.	
-    </p>
       </div>
     </div>
     <div class="box">
       <h3>Кашировка</h3>
       <div>
-        <span onclick="setKash('cap-no')" class="btn" data-group="kash" data-value="cap-no">Без подворота, только шапка</span>
-        <span onclick="setKash('cap-yes')" class="btn" data-group="kash" data-value="cap-yes">С подворотом, только шапка</span>
-        <span onclick="setKash('cap+bottom-no')" class="btn" data-group="kash" data-value="cap+bottom-no">Без подворота, Шапка+низ</span>
-        <span onclick="setKash('cap+bottom-yes')" class="btn" data-group="kash" data-value="cap+bottom-yes">С подворотом, Шапка+низ</span>
-        <span onclick="setKash('cap+3-no')" class="btn" data-group="kash" data-value="cap+3-no">Без подворота, шапка +3 блока</span>            
-        <span onclick="setKash('cap+3-yes')" class="btn" data-group="kash" data-value="cap+3-yes">С подворотом, Шапка +3 блока </span>
+        <span onclick="setKash('cap-no')" class="btn" data-group="kash" data-value="cap-no">Без, шапка</span>
+        <span onclick="setKash('cap+bottom-no')" class="btn" data-group="kash" data-value="cap+bottom-no">Без, +низ</span>
+        <span onclick="setKash('cap+3-no')" class="btn" data-group="kash" data-value="cap+3-no">Без, +3</span>
+        <span onclick="setKash('cap-yes')" class="btn" data-group="kash" data-value="cap-yes">С, шапка</span>
+        <span onclick="setKash('cap+bottom-yes')" class="btn" data-group="kash" data-value="cap+bottom-yes">С, +низ</span>
+        <span onclick="setKash('cap+3-yes')" class="btn" data-group="kash" data-value="cap+3-yes">С, +3</span>
         <span onclick="setKash('none')" id="btn-kash-none" class="btn active" data-group="kash" data-value="none">Нет</span>
       </div>
     </div>
@@ -193,6 +217,7 @@
     <div class="full-width">
       <button onclick="calculate()" class="action green">✅ Рассчитать</button>
       <button onclick="window.open('https://www.polimat.ru', '_blank')" class="action purple">🧩 Посчитать индивидуальный блок</button>
+      <button onclick="generatePriceList()" class="action" style="background:#ffc107; color:#333;">📊 Сформировать прайс</button>
     </div>
     <!-- ОШИБКА -->
     <div class="full-width">
@@ -218,10 +243,31 @@
     <p class="note">
       * Блок из <a href="https://www.polimat.ru" target="_blank">www.polimat.ru</a>. Металлизированные блоки +20 руб/шт. Офсетные блоки -5 руб/шт. Магнитный курсор +140 руб/шт
     </p>
-     <p class="note">
-           * Расчет сделан со следующими данными  "Мини: блок — 60 руб, сборка — 50 руб  ||   Миди: блок — 90 руб, сборка — 60 руб (выбрано)  ||   Макси: блок — 110 руб, сборка — 70 руб"			
-    </p>
   </div>
+
+  <!-- СКРЫТАЯ ТАБЛИЦА ДЛЯ ПРАЙСА -->
+  <div id="price-table-container">
+    <h2>Прайс-лист на квартальные календари</h2>
+    <p><em>Блок — мелованный, ламинация — 1+0</em></p>
+    <table id="price-table" border="1" cellpadding="6" cellspacing="0" style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr style="background:#f0f0f0;">
+          <th>Тип печати</th>
+          <th>Размер</th>
+          <th>Тираж</th>
+          <th>Цена за штуку (без наценки)</th>
+          <th>Цена за штуку (с наценкой)</th>
+        </tr>
+      </thead>
+      <tbody id="price-table-body"></tbody>
+    </table>
+    <p style="margin-top:20px;"><em>* Металлизированные блоки +20 ₽/шт, офсетные — -5 ₽/шт. Магнитный курсор +140 ₽/шт</em></p>
+  </div>
+
+  <!-- Подключаем библиотеки для PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <script>
     // ====== ДАННЫЕ ======
     const digitalPrices = [ [25,285,355,535], [50,277,305,520], [100,228,270,420], [150,223,260,412], [200,212,255,390], [250,198,250,360], [300,194,248,353] ];
@@ -231,6 +277,7 @@
       '1+1': {mini:30, midi:40, maxi:60},
       '1+0_soft': {mini:20, midi:25, maxi:40}
     };
+
     // ====== СОСТОЯНИЕ ======
     let state = {
       printType: 'digital',
@@ -243,16 +290,16 @@
       kash: 'none',
       markup: '20'
     };
+
     // ====== УСТАНОВКА АКТИВНЫХ КНОПОК ======
     function setActive(group, value) {
-      // Убираем active у всех кнопок группы
       document.querySelectorAll(`.btn[data-group="${group}"]`).forEach(btn => {
         btn.classList.remove('active');
       });
-      // Находим нужную кнопку и делаем active
       const btn = document.querySelector(`.btn[data-group="${group}"][data-value="${value}"]`);
       if (btn) btn.classList.add('active');
     }
+
     // ====== ПЕРЕКЛЮЧЕНИЕ ======
     function setPrint(type) {
       state.printType = type;
@@ -287,6 +334,7 @@
       state.markup = m;
       setActive('markup', m);
     }
+
     // ====== ТИРАЖИ ======
     function updateTirazhButtons() {
       const container = document.getElementById('tirazh-buttons');
@@ -298,24 +346,24 @@
         btn.textContent = t;
         btn.setAttribute('data-group', 'tirazh');
         btn.setAttribute('data-value', t);
-        btn.onclick = function() {
+        btn.onclick = () => {
           state.tirazh = t;
           setActive('tirazh', t);
         };
         container.appendChild(btn);
       });
-      // Восстанавливаем активный тираж, если он есть в новом списке
       if (list.includes(state.tirazh)) {
         setActive('tirazh', state.tirazh);
       } else {
-        // Если нет — выбираем первый
         state.tirazh = list[0];
         setActive('tirazh', list[0]);
       }
     }
     updateTirazhButtons();
+
     // ====== ИСТОРИЯ ======
     const historyData = [];
+
     // ====== РАСЧЁТ ======
     function calculate() {
       const t = state.tirazh;
@@ -327,14 +375,12 @@
         return;
       }
       let pricePerUnit = row[sizeIdx + 1];
-      // Ламинация
       if (state.lam !== 'none' && lamAdd[state.lam]) {
         pricePerUnit += lamAdd[state.lam][state.size];
       }
-      // Блок
       if (state.block === 'metallic') pricePerUnit += 20;
       if (state.block === 'offset') pricePerUnit -= 5;
-      // Кашировка → требует ламинации
+
       document.getElementById('lam-error').style.display = 'none';
       if (state.kash !== 'none' && state.lam === 'none') {
         state.lam = '1+0';
@@ -342,13 +388,12 @@
         setLam('1+0');
         document.getElementById('lam-error').style.display = 'block';
       }
-      // УФ-лак
+
       if (state.uv === 'yes') pricePerUnit += 7000/t + 10;
-      // Тиснение
       if (state.foil === 'cap') pricePerUnit += 8500/t + 10;
       if (state.foil === 'cap+bottom') pricePerUnit += 15000/t + 20;
       if (state.foil === 'cap+3') pricePerUnit += 30000/t + 40;
-      // Кашировка
+
       if (state.kash !== 'none') {
         const base = 5000/t;
         if (state.kash === 'cap-no') pricePerUnit += base + 25;
@@ -358,13 +403,14 @@
         if (state.kash === 'cap+bottom-yes') pricePerUnit += base + 230;
         if (state.kash === 'cap+3-yes') pricePerUnit += base + 460;
       }
+
       const totalBase = pricePerUnit * t;
       let totalFinal = totalBase;
       if (state.markup === '20') totalFinal *= 1.2;
       if (state.markup === '5000') totalFinal += 5000;
       const ppuFinal = Math.round(totalFinal / t);
       const totalFinalRounded = Math.round(totalFinal);
-      // Описание
+
       const sizeNames = {mini:'Мини', midi:'Миди', maxi:'Макси'};
       const blockNames = {matte:'мелованный', metallic:'металлизированный', offset:'офсетный'};
       const print = state.printType === 'offset' ? '4+0' : '4+0';
@@ -375,14 +421,14 @@
       if (state.kash !== 'none') options.push('кашировка');
       if (state.uv === 'yes') options.push('УФ-лак');
       const description = `Календарь ${sizeNames[state.size]}, ${print}, картон 300 г, ${options.join(', ')}`;
-      // Вывод
+
       document.getElementById('desc').textContent = description;
       document.getElementById('ppu').textContent = Math.round(pricePerUnit).toLocaleString();
       document.getElementById('total').textContent = Math.round(totalBase).toLocaleString();
       document.getElementById('ppu-final').textContent = ppuFinal.toLocaleString();
       document.getElementById('total-final').textContent = totalFinalRounded.toLocaleString();
       document.getElementById('result').style.display = 'block';
-      // В история
+
       historyData.push({tirazh: t, total: totalFinalRounded, desc: description});
       const list = document.getElementById('history-list');
       list.innerHTML = '';
@@ -396,11 +442,12 @@
         list.appendChild(d);
       });
       document.getElementById('history').style.display = 'block';
-      // Копирование
+
       window.copyText = `Цена за штуку: ${ppuFinal.toLocaleString()} ₽
 Общая сумма: ${totalFinalRounded.toLocaleString()} ₽
-* Блоки www.polimat.ru мелованные. Металлизированные блоки +20 руб/шт. Офсетные блоки -5 руб/шт. Магнитный курсор +140 руб/шт`;
+* Блоки полиграфические мелованные. Металлизированные блоки +20 руб/шт. Офсетные блоки -5 руб/шт. Магнитный курсор +140 руб/шт`;
     }
+
     function copyResult() {
       if (!window.copyText) {
         alert("Сначала нажмите 'Рассчитать'");
@@ -420,6 +467,104 @@
         prompt("Скопируйте:", text);
       }
       document.body.removeChild(ta);
+    }
+
+    // ====== ГЕНЕРАЦИЯ ПРАЙСА В PDF ======
+    async function generatePriceList() {
+      // Проверка загрузки библиотек
+      if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+        alert('Библиотеки PDF не загружены. Подождите...');
+        return;
+      }
+
+      const markupInput = prompt('Введите наценку:\n- в процентах: 10, 20, 50 и т.д.\n- или "5000" для +5000 ₽');
+      if (!markupInput) return;
+
+      let markupPercent = null;
+      let markupFixed = false;
+
+      if (markupInput.trim() === '5000') {
+        markupFixed = true;
+      } else {
+        markupPercent = parseFloat(markupInput);
+        if (isNaN(markupPercent) || markupPercent < 0) {
+          alert('Введите корректное число: например, 20 или "5000"');
+          return;
+        }
+      }
+
+      const container = document.getElementById('price-table-container');
+      const tableBody = document.getElementById('price-table-body');
+      tableBody.innerHTML = '';
+
+      const sizes = ['mini', 'midi', 'maxi'];
+      const sizeNames = { mini: 'Мини', midi: 'Миди', maxi: 'Макси' };
+      const printTypes = [
+        { type: 'digital', name: 'Цифровая', prices: digitalPrices },
+        { type: 'offset', name: 'Офсетная', prices: offsetPrices }
+      ];
+      const lamAddValue = lamAdd['1+0']; // Ламинация 1+0
+
+      printTypes.forEach(print => {
+        print.prices.forEach(row => {
+          const tirazh = row[0];
+          sizes.forEach((size, idx) => {
+            let pricePerUnit = row[idx + 1];
+            pricePerUnit += lamAddValue[size];
+
+            const totalBase = pricePerUnit * tirazh;
+            let priceWithMarkup = totalBase;
+
+            if (markupFixed) {
+              priceWithMarkup += 5000;
+            } else {
+              priceWithMarkup *= (1 + markupPercent / 100);
+            }
+            const ppuWithMarkup = Math.round(priceWithMarkup / tirazh);
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${print.name}</td>
+              <td>${sizeNames[size]}</td>
+              <td>${tirazh}</td>
+              <td>${Math.round(pricePerUnit)} ₽</td>
+              <td>${ppuWithMarkup} ₽</td>
+            `;
+            tableBody.appendChild(tr);
+          });
+        });
+      });
+
+      try {
+        // Ждём полной загрузки изображений
+        const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        const imgData = canvas.toDataURL('image/jpeg', 0.9);
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWithMarkup = new jsPDF('p', 'mm', 'a4');
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const imgWidth = pageWidth - 20;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        // PDF без наценки
+        pdf.addImage(imgData, 'JPEG', 10, 20, imgWidth, imgHeight);
+        pdf.setFontSize(12);
+        pdf.text('Прайс без наценки', 10, 10);
+        pdf.save('прайс_без_наценки.pdf');
+
+        // PDF с наценкой
+        const markupLabel = markupFixed ? '+5000 ₽' : `+${markupPercent}%`;
+        pdfWithMarkup.addImage(imgData, 'JPEG', 10, 20, imgWidth, imgHeight);
+        pdfWithMarkup.setFontSize(12);
+        pdfWithMarkup.text(`Прайс с наценкой ${markupLabel}`, 10, 10);
+        pdfWithMarkup.save(`прайс_с_наценкой_${markupLabel.replace(/[^\w]/g, '_')}.pdf`);
+
+      } catch (e) {
+        console.error('Ошибка генерации PDF:', e);
+        alert('Ошибка при создании PDF. Проверьте интернет-соединение и попробуйте снова.');
+      }
     }
   </script>
 </body>
