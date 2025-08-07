@@ -469,26 +469,16 @@
       document.body.removeChild(ta);
     }
 
-async function generatePriceList() {
-  // Проверка библиотек
-  if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-    alert('Библиотеки не загружены. Подождите...');
-    return;
-  }
-
-  const markupInput = prompt('Введите наценку:\n- в процентах: 20, 50 и т.д.\n- или "5000" для +5000 ₽');
+function generatePriceList() {
+  const markupInput = prompt('Введите наценку:\n- в процентах: 10, 20, 50 и т.д.\n- или "5000" для +5000 ₽');
   if (!markupInput) return;
 
   let markupFixed = markupInput.trim() === '5000';
   let markupPercent = markupFixed ? 0 : parseFloat(markupInput);
   if (!markupFixed && (isNaN(markupPercent) || markupPercent < 0)) {
-    alert('Введите корректное значение: 20, 50 или "5000"');
+    alert('Введите корректное число: например, 20 или "5000"');
     return;
   }
-
-  const container = document.getElementById('price-table-container');
-  const tableBody = document.getElementById('price-table-body');
-  tableBody.innerHTML = '';
 
   const sizes = ['mini', 'midi', 'maxi'];
   const sizeNames = { mini: 'Мини', midi: 'Миди', maxi: 'Макси' };
@@ -498,79 +488,106 @@ async function generatePriceList() {
   ];
   const lamAddValue = lamAdd['1+0'];
 
-  printTypes.forEach(print => {
-    print.prices.forEach(row => {
-      const tirazh = row[0];
-      sizes.forEach((size, idx) => {
-        let pricePerUnit = row[idx + 1] + lamAddValue[size];
-        let totalBase = pricePerUnit * tirazh;
-        let totalWithMarkup = markupFixed 
-          ? totalBase + 5000 
-          : totalBase * (1 + markupPercent / 100);
-        const ppuWithMarkup = Math.round(totalWithMarkup / tirazh);
+  // Собираем все уникальные тиражи
+  const allTirazhi = [...new Set(printTypes.flatMap(pt => pt.prices.map(r => r[0])))].sort((a, b) => a - b);
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${print.name}</td>
-          <td>${sizeNames[size]}</td>
-          <td>${tirazh}</td>
-          <td>${Math.round(pricePerUnit)} ₽</td>
-          <td>${ppuWithMarkup} ₽</td>
-        `;
-        tableBody.appendChild(tr);
-      });
+  let html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Прайс-лист</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1, h2 { text-align: center; color: #333; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    th {
+      background: #f0f0f0;
+      font-weight: bold;
+    }
+    .size-row td:first-child {
+      font-weight: bold;
+      background: #f9f9f9;
+    }
+    .note {
+      font-size: 12px;
+      color: #555;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <h1>ПРАЙС-ЛИСТ НА КВАРТАЛЬНЫЕ КАЛЕНДАРИ</h1>
+  <p style="text-align: center;"><strong>Условия:</strong> блок — мелованный, ламинация — 1+0</p>
+`;
+
+  printTypes.forEach(print => {
+    const tirazhi = print.prices.map(r => r[0]);
+    const availableTirazhi = allTirazhi.filter(t => tirazhi.includes(t));
+
+    html += `<h2>${print.name} печать</h2>`;
+    html += `<table>`;
+    // Заголовок
+    html += `<tr><th>Размер</th>`;
+    availableTirazhi.forEach(t => {
+      html += `<th>${t} шт</th>`;
     });
+    html += `</tr>`;
+
+    // Строки по размерам
+    sizes.forEach(size => {
+      html += `<tr class="size-row"><td>${sizeNames[size]}</td>`;
+      availableTirazhi.forEach(tirazh => {
+        const row = print.prices.find(r => r[0] === tirazh);
+        if (!row) {
+          html += `<td>—</td>`;
+          return;
+        }
+        let pricePerUnit = row[sizes.indexOf(size) + 1] + lamAddValue[size];
+        let total = pricePerUnit * tirazh;
+        if (markupFixed) total += 5000;
+        else total *= (1 + markupPercent / 100);
+        const ppuWithMarkup = Math.round(total / tirazh);
+        html += `<td>${ppuWithMarkup} ₽</td>`;
+      });
+      html += `</tr>`;
+    });
+
+    html += `</table>`;
   });
 
-  // Временно показываем контейнер вне экрана
-  container.style.display = 'block';
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '-9999px';
-  container.style.visibility = 'hidden';
-  document.body.appendChild(container);
+  html += `
+  <div class="note">
+    <p><strong>Примечания:</strong></p>
+    <ul>
+      <li>Металлизированные блоки: +20 ₽/шт</li>
+      <li>Офсетные блоки: -5 ₽/шт</li>
+      <li>Магнитный курсор: +140 ₽/шт</li>
+      <li>Все цены указаны с учётом наценки (${markupFixed ? 'фикс +5000 ₽' : '+' + markupPercent + '%'})</li>
+    </ul>
+  </div>
+  </body>
+  </html>
+  `;
 
-  try {
-    await new Promise(r => setTimeout(r, 300));
-    const canvas = await html2canvas(container, { scale: 1, useCORS: true, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-
-    const { jsPDF } = window.jspdf;
-
-    // === КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: добавляем шрифт с кириллицей ===
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    
-    // Регистрируем шрифт (Roboto или любой другой)
-    pdf.addFont('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/font/Arial-Regular.ttf', 'Arial', 'normal');
-    pdf.setFont('Arial');
-
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const imgWidth = pageWidth - 20;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    // PDF без наценки
-    pdf.addImage(imgData, 'JPEG', 10, 20, imgWidth, imgHeight);
-    pdf.setFontSize(12);
-    pdf.text('Прайс без наценки', 10, 10);
-    pdf.save('прайс_без_наценки.pdf');
-
-    // PDF с наценкой
-    const markupLabel = markupFixed ? '+5000 ₽' : `+${markupPercent}%`;
-    const pdf2 = new jsPDF('p', 'mm', 'a4');
-    pdf2.addFont('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/font/Arial-Regular.ttf', 'Arial', 'normal');
-    pdf2.setFont('Arial');
-    pdf2.addImage(imgData, 'JPEG', 10, 20, imgWidth, imgHeight);
-    pdf2.setFontSize(12);
-    pdf2.text(`Прайс с наценкой ${markupLabel}`, 10, 10);
-    pdf2.save(`прайс_с_наценкой_${markupLabel.replace(/[^\w]/g, '_')}.pdf`);
-
-    container.style.display = 'none';
-    document.body.removeChild(container);
-
-  } catch (e) {
-    console.error('Ошибка генерации PDF:', e);
-    alert('Не удалось создать PDF с русским текстом. Попробуйте обновить страницу.');
-  }
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const link = document.createElement('a');
+  const now = new Date().toISOString().slice(0, 16).replace('T', '_');
+  link.download = `прайс_календари_${now}.html`;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
   </script>
 </body>
