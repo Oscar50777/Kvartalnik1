@@ -469,28 +469,21 @@
       document.body.removeChild(ta);
     }
 
-// ====== ГЕНЕРАЦИЯ ПРАЙСА В PDF ======
 async function generatePriceList() {
-  // Проверка загрузки библиотек
+  // Проверка библиотек
   if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-    alert('Ошибка: библиотеки PDF не загружены. Подождите или обновите страницу.');
+    alert('Библиотеки не загружены. Подождите...');
     return;
   }
 
-  const markupInput = prompt('Введите наценку:\n- в процентах: 10, 20, 50 и т.д.\n- или "5000" для +5000 ₽');
+  const markupInput = prompt('Введите наценку:\n- в процентах: 20, 50 и т.д.\n- или "5000" для +5000 ₽');
   if (!markupInput) return;
 
-  let markupPercent = null;
-  let markupFixed = false;
-
-  if (markupInput.trim() === '5000') {
-    markupFixed = true;
-  } else {
-    markupPercent = parseFloat(markupInput);
-    if (isNaN(markupPercent) || markupPercent < 0) {
-      alert('Введите корректное число: например, 20 или "5000"');
-      return;
-    }
+  let markupFixed = markupInput.trim() === '5000';
+  let markupPercent = markupFixed ? 0 : parseFloat(markupInput);
+  if (!markupFixed && (isNaN(markupPercent) || markupPercent < 0)) {
+    alert('Введите корректное значение: 20, 50 или "5000"');
+    return;
   }
 
   const container = document.getElementById('price-table-container');
@@ -503,24 +496,18 @@ async function generatePriceList() {
     { type: 'digital', name: 'Цифровая', prices: digitalPrices },
     { type: 'offset', name: 'Офсетная', prices: offsetPrices }
   ];
-  const lamAddValue = lamAdd['1+0']; // Ламинация 1+0
+  const lamAddValue = lamAdd['1+0'];
 
   printTypes.forEach(print => {
     print.prices.forEach(row => {
       const tirazh = row[0];
       sizes.forEach((size, idx) => {
-        let pricePerUnit = row[idx + 1];
-        pricePerUnit += lamAddValue[size];
-
-        const totalBase = pricePerUnit * tirazh;
-        let priceWithMarkup = totalBase;
-
-        if (markupFixed) {
-          priceWithMarkup += 5000;
-        } else {
-          priceWithMarkup *= (1 + markupPercent / 100);
-        }
-        const ppuWithMarkup = Math.round(priceWithMarkup / tirazh);
+        let pricePerUnit = row[idx + 1] + lamAddValue[size];
+        let totalBase = pricePerUnit * tirazh;
+        let totalWithMarkup = markupFixed 
+          ? totalBase + 5000 
+          : totalBase * (1 + markupPercent / 100);
+        const ppuWithMarkup = Math.round(totalWithMarkup / tirazh);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -535,7 +522,7 @@ async function generatePriceList() {
     });
   });
 
-  // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: временно делаем видимым, но за пределами экрана ---
+  // Временно показываем контейнер вне экрана
   container.style.display = 'block';
   container.style.position = 'absolute';
   container.style.left = '-9999px';
@@ -544,21 +531,18 @@ async function generatePriceList() {
   document.body.appendChild(container);
 
   try {
-    // Уменьшаем scale и добавляем задержку для стабильности
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    const canvas = await html2canvas(container, {
-      scale: 1,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.8);
+    await new Promise(r => setTimeout(r, 300));
+    const canvas = await html2canvas(container, { scale: 1, useCORS: true, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.9);
 
     const { jsPDF } = window.jspdf;
+
+    // === КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: добавляем шрифт с кириллицей ===
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWithMarkup = new jsPDF('p', 'mm', 'a4');
+    
+    // Регистрируем шрифт (Roboto или любой другой)
+    pdf.addFont('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/font/Arial-Regular.ttf', 'Arial', 'normal');
+    pdf.setFont('Arial');
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const imgWidth = pageWidth - 20;
@@ -572,18 +556,20 @@ async function generatePriceList() {
 
     // PDF с наценкой
     const markupLabel = markupFixed ? '+5000 ₽' : `+${markupPercent}%`;
-    pdfWithMarkup.addImage(imgData, 'JPEG', 10, 20, imgWidth, imgHeight);
-    pdfWithMarkup.setFontSize(12);
-    pdfWithMarkup.text(`Прайс с наценкой ${markupLabel}`, 10, 10);
-    pdfWithMarkup.save(`прайс_с_наценкой_${markupLabel.replace(/[^\w]/g, '_')}.pdf`);
+    const pdf2 = new jsPDF('p', 'mm', 'a4');
+    pdf2.addFont('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/font/Arial-Regular.ttf', 'Arial', 'normal');
+    pdf2.setFont('Arial');
+    pdf2.addImage(imgData, 'JPEG', 10, 20, imgWidth, imgHeight);
+    pdf2.setFontSize(12);
+    pdf2.text(`Прайс с наценкой ${markupLabel}`, 10, 10);
+    pdf2.save(`прайс_с_наценкой_${markupLabel.replace(/[^\w]/g, '_')}.pdf`);
 
-    // Убираем временный блок
     container.style.display = 'none';
     document.body.removeChild(container);
 
   } catch (e) {
     console.error('Ошибка генерации PDF:', e);
-    alert('Не удалось создать PDF. Возможно, блокировка контента или ошибка рендеринга.');
+    alert('Не удалось создать PDF с русским текстом. Попробуйте обновить страницу.');
   }
 }
   </script>
